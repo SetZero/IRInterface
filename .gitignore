@@ -25,3 +25,5 @@ IRInterface/IRInterface-backups
 # Exported BOM files
 *.xml
 *.csv
+
+out/

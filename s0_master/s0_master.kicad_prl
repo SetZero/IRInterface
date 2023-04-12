@@ -64,11 +64,11 @@
       39,
       40
     ],
-    "visible_layers": "ffdffff_ffffffff",
+    "visible_layers": "ffcffff_ffffffff",
     "zone_display_mode": 0
   },
   "meta": {
-    "filename": "IRInterface.kicad_prl",
+    "filename": "s0_master.kicad_prl",
     "version": 3
   },
   "project": {

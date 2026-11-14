@@ -1,0 +1,4 @@
+# Keep Unix line endings in the working tree on every platform. The shell
+# scripts fail under bash with CRLF, and clang-format would otherwise report
+# every line of a fresh Windows checkout as changed.
+* text=auto eol=lf

@@ -1,0 +1,8 @@
+identifier: s0_master/esp32s3/appcpu
+name: S0 Master 0.1 APPCPU
+type: mcu
+arch: xtensa
+toolchain:
+  - zephyr
+supported:
+  - uart

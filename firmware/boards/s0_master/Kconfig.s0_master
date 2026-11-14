@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: Apache-2.0
+
+# Fitted module reports 4 MB quad flash and 2 MB embedded PSRAM
+# (ESP32-S3-WROOM-1-N4R2).
+config BOARD_S0_MASTER
+	select SOC_ESP32S3_WROOM_N4R2
+	select SOC_ESP32S3_PROCPU if BOARD_S0_MASTER_ESP32S3_PROCPU
+	select SOC_ESP32S3_APPCPU if BOARD_S0_MASTER_ESP32S3_APPCPU

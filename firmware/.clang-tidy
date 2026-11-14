@@ -1,0 +1,47 @@
+# Naming rules for the firmware, checked by tools/lint.sh.
+#
+#   Types, enumerators, template parameters   CamelCase    MeterMode::Automatic
+#   Functions, variables, namespaces           lower_case   parse_status()
+#   Private and protected data members         lower_case_  length_
+#   No names shorter than three characters, loop counters included.
+---
+Checks: >
+  -*,
+  readability-identifier-naming,
+  readability-identifier-length
+
+# Only our own sources; Zephyr and the vendor HALs follow their own rules.
+HeaderFilterRegex: '.*[/\\]firmware[/\\](apps|lib|tests)[/\\].*'
+
+CheckOptions:
+  readability-identifier-naming.EnumCase: CamelCase
+  readability-identifier-naming.EnumConstantCase: CamelCase
+  readability-identifier-naming.ScopedEnumConstantCase: CamelCase
+  readability-identifier-naming.ClassCase: CamelCase
+  readability-identifier-naming.StructCase: CamelCase
+  readability-identifier-naming.UnionCase: CamelCase
+  readability-identifier-naming.ConceptCase: CamelCase
+  readability-identifier-naming.TypeTemplateParameterCase: CamelCase
+  readability-identifier-naming.ValueTemplateParameterCase: CamelCase
+  readability-identifier-naming.TemplateTemplateParameterCase: CamelCase
+
+  readability-identifier-naming.NamespaceCase: lower_case
+  readability-identifier-naming.FunctionCase: lower_case
+  readability-identifier-naming.MethodCase: lower_case
+  readability-identifier-naming.VariableCase: lower_case
+  readability-identifier-naming.ParameterCase: lower_case
+  readability-identifier-naming.ConstexprVariableCase: lower_case
+  readability-identifier-naming.MemberCase: lower_case
+  readability-identifier-naming.PrivateMemberCase: lower_case
+  readability-identifier-naming.PrivateMemberSuffix: '_'
+  readability-identifier-naming.ProtectedMemberCase: lower_case
+  readability-identifier-naming.ProtectedMemberSuffix: '_'
+
+  readability-identifier-length.MinimumVariableNameLength: 3
+  readability-identifier-length.MinimumParameterNameLength: 3
+  readability-identifier-length.MinimumLoopCounterNameLength: 3
+  readability-identifier-length.IgnoredLoopCounterNames: ''
+  # "id", "ip" and "ok" are words in their own right
+  readability-identifier-length.IgnoredVariableNames: '^(id|ip|ok)$'
+  readability-identifier-length.IgnoredParameterNames: '^(id|ip|ok)$'
+...

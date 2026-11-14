@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
+
+config BOARD_IRINTERFACE
+	select SOC_STM32G030XX

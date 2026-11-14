@@ -1,0 +1,87 @@
+# Layout rules for the firmware. They follow the Zephyr kernel's own style
+# (tabs of width 8, 100 columns, Linux braces) so application code and the
+# code it is built on read the same.
+#
+# clang-format only arranges code. Naming, including the CamelCase rule for
+# enumerators, is enforced by clang-tidy: see .clang-tidy and tools/lint.sh.
+---
+BasedOnStyle: LLVM
+Standard: Latest
+
+UseTab: ForContinuationAndIndentation
+IndentWidth: 8
+TabWidth: 8
+ContinuationIndentWidth: 8
+ConstructorInitializerIndentWidth: 8
+ColumnLimit: 100
+
+# Linux kernel braces: on their own line for functions only.
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterFunction: true
+  AfterClass: false
+  AfterStruct: false
+  AfterUnion: false
+  AfterEnum: false
+  AfterNamespace: false
+  AfterControlStatement: Never
+  AfterExternBlock: false
+  BeforeElse: false
+  BeforeCatch: false
+  BeforeLambdaBody: false
+  SplitEmptyFunction: true
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortLambdasOnASingleLine: Inline
+InsertBraces: true
+
+IndentCaseLabels: false
+IndentGotoLabels: false
+NamespaceIndentation: None
+AccessModifierOffset: -8
+FixNamespaceComments: false
+BitFieldColonSpacing: After
+SpaceBeforeInheritanceColon: false
+SpaceBeforeParens: ControlStatementsExceptControlMacros
+AlignConsecutiveMacros: AcrossComments
+AlignTrailingComments:
+  Kind: Always
+  OverEmptyLines: 0
+PointerAlignment: Right
+ReferenceAlignment: Right
+RequiresClausePosition: OwnLine
+IndentRequiresClause: true
+BreakTemplateDeclarations: Yes
+KeepEmptyLines:
+  AtStartOfBlock: false
+MaxEmptyLinesToKeep: 1
+InsertNewlineAtEOF: true
+
+# Includes are grouped by hand: standard library, Zephyr, shared library, own.
+SortIncludes: Never
+
+AttributeMacros:
+  - __aligned
+  - __packed
+  - __printf_like
+ForEachMacros:
+  - SYS_SLIST_FOR_EACH_CONTAINER
+  - STRUCT_SECTION_FOREACH
+StatementMacros:
+  - K_MUTEX_DEFINE
+  - K_MSGQ_DEFINE
+  - K_KERNEL_STACK_DEFINE
+  - LOG_MODULE_REGISTER
+  - HTTP_SERVICE_DEFINE
+  - HTTP_RESOURCE_DEFINE
+  - SHELL_CMD_REGISTER
+  - S0_API
+WhitespaceSensitiveMacros:
+  - STRINGIFY
+...

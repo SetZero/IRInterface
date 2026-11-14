@@ -1,0 +1,5 @@
+board:
+  name: s0_master
+  full_name: S0 Master 0.1
+  socs:
+    - name: esp32s3

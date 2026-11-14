@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: Apache-2.0
+
+CONFIG_SERIAL=y
+CONFIG_GPIO=y
+
+# Both USARTs are taken (optical head and RS-485) and there is no LED,
+# so the console goes out through SWD using SEGGER RTT.
+CONFIG_CONSOLE=y
+CONFIG_UART_CONSOLE=n
+CONFIG_USE_SEGGER_RTT=y
+CONFIG_RTT_CONSOLE=y
+
+# 8 KB of RAM in total: keep the RTT buffers small.
+CONFIG_SEGGER_RTT_BUFFER_SIZE_UP=256
+CONFIG_SEGGER_RTT_BUFFER_SIZE_DOWN=16

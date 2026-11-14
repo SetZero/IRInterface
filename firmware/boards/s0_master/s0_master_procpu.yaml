@@ -1,0 +1,12 @@
+identifier: s0_master/esp32s3/procpu
+name: S0 Master 0.1 PROCPU
+type: mcu
+arch: xtensa
+toolchain:
+  - zephyr
+supported:
+  - gpio
+  - uart
+  - watchdog
+  - entropy
+  - netif:wifi

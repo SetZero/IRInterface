@@ -1,0 +1,135 @@
+/*
+ * IR Interface - optical meter read head with RS-485 uplink
+ * STM32G030F6P6 (TSSOP-20, 32 KB flash, 8 KB RAM), KiCad project "IRInterface"
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/dts-v1/;
+#include <st/g0/stm32g030X6.dtsi>
+#include <st/g0/stm32g030f6px-pinctrl.dtsi>
+
+/ {
+	model = "IR Interface";
+	compatible = "setzero,irinterface";
+
+	chosen {
+		zephyr,sram = &sram0;
+		zephyr,flash = &flash0;
+	};
+
+	aliases {
+		ir-uart = &usart1;
+		rs485-uart = &usart2;
+	};
+
+	/*
+	 * The two things the IR LED pin (PB7) can do. "default" is the
+	 * optical UART's transmitter, "lamp" holds the LED lit: the LED is
+	 * on while the line is low. The application switches between them
+	 * to flash slow light signals at a meter's optical button.
+	 */
+	zephyr,user {
+		pinctrl-0 = <&usart1_rx_pb7>;
+		pinctrl-1 = <&ir_led_lit>;
+		pinctrl-names = "default", "lamp";
+	};
+};
+
+&pinctrl {
+	ir_led_lit: ir_led_lit {
+		pinmux = <STM32_PINMUX('B', 7, GPIO)>;
+		output-low;
+	};
+};
+
+/*
+ * No crystal on the board: PC14 (pin 2) is used as a GPIO, so the internal
+ * 16 MHz oscillator is the only source. It feeds the PLL for a 64 MHz
+ * system clock. The speed is needed, not optional: the RS-485 UART has no
+ * FIFO, so at 115200 baud every received byte must be fetched within 87 us,
+ * and at 16 MHz the kernel's interrupt-off sections were long enough to
+ * lose about one byte in thirty.
+ *
+ * The peripheral bus stays at 16 MHz. The UARTs divide that clock by a
+ * 16-bit number, and from 64 MHz the optical UART could not get down to the
+ * 300 baud that IEC 62056-21 meters start at.
+ */
+&clk_hsi {
+	status = "okay";
+};
+
+&pll {
+	div-m = <1>;
+	mul-n = <8>;
+	div-r = <2>;
+	clocks = <&clk_hsi>;
+	status = "okay";
+};
+
+&rcc {
+	clocks = <&pll>;
+	clock-frequency = <DT_FREQ_M(64)>;
+	ahb-prescaler = <1>;
+	apb1-prescaler = <4>;
+};
+
+/*
+ * Optical interface.
+ *
+ * Receive: SFH309 -> Q2 -> U1 (74LVC1G17) -> pin 20 (PB3/PB4/PB5/PB6)
+ * Transmit: pin 1 (PB7/PB8) -> U2 (74LVC1G17) -> Q3 -> SFH482
+ *
+ * The schematic routes the receiver to PB6 (USART1_TX) and the LED driver
+ * to PB7 (USART1_RX), so the USART has to swap its pins. Line levels are
+ * already UART-compatible (light = low = start bit / space).
+ */
+&usart1 {
+	pinctrl-0 = <&usart1_tx_pb6 &usart1_rx_pb7>;
+	pinctrl-names = "default";
+	current-speed = <9600>;
+	tx-rx-swap;
+	status = "okay";
+};
+
+/*
+ * RS-485 uplink (THVD1424, hard-wired full duplex, both terminations on).
+ *
+ *   PA2 -> D, PA3 <- R, PA1 -> DE (driven by the USART), PA4 -> /RE, PB9 -> SLR
+ *
+ * With a straight-through RJ45 cable the differential pairs arrive with
+ * swapped polarity on both boards (Y/Z of one side land on B/A of the
+ * other). Each board therefore inverts its own transmitter, which keeps
+ * the receivers' idle fail-safe meaningful while a driver is disabled.
+ */
+&usart2 {
+	pinctrl-0 = <&usart2_tx_pa2 &usart2_rx_pa3 &usart2_de_pa1>;
+	pinctrl-names = "default";
+	current-speed = <115200>;
+	tx-invert;
+	de-enable;
+	de-assert-time = <16>;
+	de-deassert-time = <16>;
+	status = "okay";
+};
+
+&gpioa {
+	/* THVD1424 /RE: keep the receiver enabled */
+	rs485-re {
+		gpio-hog;
+		gpios = <4 GPIO_ACTIVE_HIGH>;
+		output-low;
+	};
+};
+
+&gpiob {
+	/*
+	 * THVD1424 SLR on pin 2 (PC14/PB9 share the pin, PC14 stays analog).
+	 * High = slew-rate limited (up to 500 kbit/s), low = 20 Mbit/s.
+	 */
+	rs485-slr {
+		gpio-hog;
+		gpios = <9 GPIO_ACTIVE_HIGH>;
+		output-high;
+	};
+};

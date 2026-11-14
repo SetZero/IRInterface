@@ -1,0 +1,961 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S0 Master</title>
+<style>
+:root {
+	color-scheme: light;
+	--page: #f9f9f7;
+	--surface: #fcfcfb;
+	--text-primary: #0b0b0b;
+	--text-secondary: #52514e;
+	--text-muted: #898781;
+	--grid: #e1e0d9;
+	--axis: #c3c2b7;
+	--border: rgba(11, 11, 11, 0.10);
+	--series: #2a78d6;
+	--good: #0ca30c;
+	--warning: #fab219;
+	--critical: #d03b3b;
+	--accent: #2a78d6;
+	--accent-ink: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+	:root {
+		color-scheme: dark;
+		--page: #0d0d0d;
+		--surface: #1a1a19;
+		--text-primary: #f0efec;
+		--text-secondary: #c3c2b7;
+		--text-muted: #898781;
+		--grid: #2c2c2a;
+		--axis: #383835;
+		--border: rgba(255, 255, 255, 0.10);
+		--series: #3987e5;
+		--accent: #3987e5;
+	}
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+	margin: 0;
+	background: var(--page);
+	color: var(--text-primary);
+	font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+main { max-width: 980px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
+main > * { min-width: 0; }
+/* during first-time setup the Wi-Fi form comes right after the explanation */
+main.setup > header { order: -3; }
+main.setup > #setup-banner { order: -2; }
+main.setup > #wifi-card { order: -1; }
+.scroll { overflow-x: auto; }
+header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+h1 { font-size: 20px; margin: 0; font-weight: 600; }
+h2 { font-size: 15px; margin: 0 0 12px; font-weight: 600; }
+.subtitle { color: var(--text-secondary); font-size: 13px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+.pills { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+.pill {
+	display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 6px;
+	border: 1px solid var(--border); border-radius: 999px; font-size: 13px;
+	color: var(--text-secondary); background: var(--surface);
+}
+.pill .icon {
+	width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center;
+	font-size: 11px; font-weight: 700; color: #ffffff; background: var(--text-muted);
+}
+.pill.good .icon { background: var(--good); }
+.pill.warning .icon { background: var(--warning); color: #0b0b0b; }
+.pill.critical .icon { background: var(--critical); }
+.overview { display: grid; grid-template-columns: minmax(220px, 1fr) 2fr; gap: 16px; }
+@media (max-width: 700px) { .overview { grid-template-columns: 1fr; } }
+.hero .value { font-size: 56px; font-weight: 600; line-height: 1.1; margin: 4px 0; }
+.hero .unit { font-size: 22px; font-weight: 500; color: var(--text-secondary); margin-left: 6px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.tile { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.tile .label { color: var(--text-secondary); font-size: 13px; }
+.tile .value { font-size: 22px; font-weight: 600; }
+.tile .unit { font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-left: 4px; }
+/* values that are no longer current step back */
+main.stale #tiles, main.stale #values-table tbody { opacity: 0.45; }
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; height: 240px; outline: none; }
+.chart svg:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.chart text { fill: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.tooltip {
+	position: absolute; pointer-events: none; padding: 6px 10px; border-radius: 6px;
+	background: var(--surface); border: 1px solid var(--border);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); font-size: 13px; white-space: nowrap;
+}
+.tooltip strong { display: block; font-size: 15px; }
+.tooltip span { color: var(--text-secondary); }
+.empty { color: var(--text-muted); padding: 32px 0; text-align: center; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--grid); }
+th { color: var(--text-secondary); font-weight: 500; }
+td.number { text-align: right; font-variant-numeric: tabular-nums; }
+th.number { text-align: right; }
+code, .mono { font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
+details > summary { cursor: pointer; font-weight: 600; }
+details[open] > summary { margin-bottom: 12px; }
+form { display: grid; gap: 10px; max-width: 460px; }
+label { display: grid; gap: 4px; font-size: 13px; color: var(--text-secondary); }
+label.inline { display: flex; align-items: center; gap: 8px; }
+input, select, textarea, button {
+	font: inherit; color: var(--text-primary); background: var(--page);
+	border: 1px solid var(--axis); border-radius: 6px; padding: 7px 9px;
+}
+textarea { width: 100%; min-height: 70px; }
+input[type="checkbox"] { width: 20px; height: 20px; padding: 0; }
+/* Touch screens: controls large enough for a finger, and text of 16px so
+ * that iOS does not zoom the page when a field gets the focus. */
+@media (pointer: coarse), (max-width: 700px) {
+	input, select, textarea, button { font-size: 16px; padding: 11px 12px; min-height: 46px; }
+	input[type="checkbox"] { width: 24px; height: 24px; min-height: 0; padding: 0; }
+	form { gap: 14px; max-width: none; }
+	label { font-size: 14px; gap: 6px; }
+	.networks { max-width: none; gap: 8px; }
+	.row { gap: 10px; }
+	details > summary { padding: 6px 0; }
+}
+button { cursor: pointer; background: var(--surface); }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+button.danger { border-color: var(--critical); }
+button:disabled { opacity: 0.5; cursor: default; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.message { font-size: 13px; color: var(--text-secondary); min-height: 1.4em; }
+.message.error { color: var(--critical); }
+.networks { display: grid; gap: 4px; max-width: 460px; margin-bottom: 10px; }
+.networks button { display: flex; justify-content: space-between; text-align: left; }
+.banner { border-left: 4px solid var(--accent); }
+.raw { word-break: break-all; max-height: 160px; overflow: auto; color: var(--text-secondary); }
+dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0; font-size: 14px; }
+dt { color: var(--text-secondary); }
+dd { margin: 0; }
+</style>
+</head>
+<body>
+<main>
+	<header>
+		<div>
+			<h1>S0 Master</h1>
+			<div class="subtitle" id="device-line">Connecting…</div>
+		</div>
+		<div class="pills" id="pills"></div>
+	</header>
+
+	<section class="card banner" id="setup-banner" hidden>
+		<h2>Connect to your Wi-Fi</h2>
+		<p class="subtitle">This device has no network yet. Pick yours below; the meter values
+		are then available on your home network.</p>
+	</section>
+
+	<section class="overview">
+		<div class="card hero">
+			<div class="subtitle">Power now</div>
+			<div class="value"><span id="power-value">–</span><span class="unit" id="power-unit">W</span></div>
+			<div class="subtitle" id="reading-line">No telegram received yet</div>
+		</div>
+		<div class="card">
+			<div class="tiles" id="tiles"><div class="empty">Waiting for the meter…</div></div>
+		</div>
+	</section>
+
+	<section class="card">
+		<h2>Power over the last hour</h2>
+		<div class="chart" id="chart">
+			<div class="empty" id="chart-empty">No history yet. A point is added every 10 seconds.</div>
+			<svg id="chart-svg" tabindex="0" role="img" aria-label="Power over the last hour" hidden></svg>
+			<div class="tooltip" id="chart-tooltip" hidden><strong></strong><span></span></div>
+		</div>
+		<details>
+			<summary class="subtitle">Show as table</summary>
+			<table id="history-table"><thead><tr><th>Minutes ago</th><th class="number">Average power (W)</th></tr></thead><tbody></tbody></table>
+		</details>
+	</section>
+
+	<section class="card">
+		<h2>All values in the telegram</h2>
+		<div class="scroll"><table id="values-table">
+			<thead><tr><th>OBIS</th><th>Quantity</th><th class="number">Value</th><th>Unit</th></tr></thead>
+			<tbody><tr><td colspan="4" class="empty">Waiting for the meter…</td></tr></tbody>
+		</table></div>
+	</section>
+
+	<section class="card" id="wifi-card">
+		<details id="wifi-details">
+			<summary>Wi-Fi</summary>
+			<div class="networks" id="networks"></div>
+			<form id="wifi-form">
+				<label>Network name<input name="ssid" maxlength="32" required autocomplete="off"></label>
+				<label>Password<input name="psk" type="password" maxlength="64" autocomplete="off"></label>
+				<div class="row"><button class="primary">Save and connect</button><button type="button" id="scan-button">Scan</button></div>
+				<div class="message" id="wifi-message"></div>
+			</form>
+		</details>
+	</section>
+
+	<section class="card">
+		<details>
+			<summary>Unlock meter</summary>
+			<p class="subtitle">Meters without a button are operated by flashing light at their
+			optical port. The read head can do that with its LED: a short flash steps through the
+			display, a long one changes a setting, and the PIN is entered as one flash per count
+			of each digit. The PIN comes from your metering point operator; it is used once and
+			not stored here. The meter's manual has the exact procedure.</p>
+			<form id="pin-form">
+				<label>PIN<input name="pin" inputmode="numeric" pattern="[0-9]{1,8}" maxlength="8" required autocomplete="off"></label>
+				<details>
+					<summary class="subtitle">Timing</summary>
+					<label>Flashes that bring up the PIN prompt<input name="wake_pulses" type="number" min="0" max="20" value="2"></label>
+					<label>Wait for the PIN prompt (ms)<input name="wake_pause_ms" type="number" min="0" max="60000" value="4000"></label>
+					<label>Length of a flash (ms)<input name="pulse_ms" type="number" min="20" max="20000" value="400"></label>
+					<label>Gap between flashes (ms)<input name="gap_ms" type="number" min="20" max="20000" value="400"></label>
+					<label>Wait that accepts a digit (ms)<input name="digit_pause_ms" type="number" min="500" max="60000" value="3500"></label>
+				</details>
+				<div class="row">
+					<button class="primary">Enter PIN</button>
+					<button type="button" data-flash="400">Short flash</button>
+					<button type="button" data-flash="5000">Long flash (5 s)</button>
+					<button type="button" id="signal-stop">Stop</button>
+				</div>
+				<div class="message" id="unlock-message"></div>
+			</form>
+		</details>
+	</section>
+
+	<section class="card">
+		<details>
+			<summary>Meter interface</summary>
+			<form id="meter-form">
+				<label>Mode<select name="meter_mode">
+					<option value="auto">Automatic: find the meter's settings</option>
+					<option value="passive">Listen with the settings below</option>
+					<option value="active">Request data (IEC 62056-21)</option>
+				</select></label>
+				<label>Baud rate<select name="ir_baud">
+					<option>300</option><option>600</option><option>1200</option><option>2400</option>
+					<option>4800</option><option>9600</option><option>19200</option><option>38400</option>
+				</select></label>
+				<label>Format<select name="ir_format"><option>8N1</option><option>7E1</option></select></label>
+				<label>Seconds between requests<input name="poll_interval_s" type="number" min="10" max="3600"></label>
+				<div class="row"><button class="primary">Save</button></div>
+				<div class="message" id="meter-message"></div>
+			</form>
+		</details>
+	</section>
+
+	<section class="card">
+		<details>
+			<summary>MQTT</summary>
+			<form id="mqtt-form">
+				<label class="inline"><input name="mqtt_enabled" type="checkbox">Publish every telegram</label>
+				<label>Broker address<input name="mqtt_host" maxlength="64" autocomplete="off"></label>
+				<label>Port<input name="mqtt_port" type="number" min="1" max="65535"></label>
+				<label>User name<input name="mqtt_user" maxlength="32" autocomplete="off"></label>
+				<label>Password<input name="mqtt_password" type="password" maxlength="64" autocomplete="off" placeholder="unchanged"></label>
+				<label>Topic prefix<input name="mqtt_topic" maxlength="48" autocomplete="off"></label>
+				<label class="inline"><input name="mqtt_discovery" type="checkbox">Announce sensors to Home Assistant</label>
+				<div class="row"><button class="primary">Save</button></div>
+				<div class="message" id="mqtt-message"></div>
+			</form>
+		</details>
+	</section>
+
+	<section class="card">
+		<details id="diagnostics">
+			<summary>Diagnostics</summary>
+			<dl id="diagnostics-list"></dl>
+			<h2 style="margin-top:16px">Last bytes from the optical interface</h2>
+			<div class="raw mono" id="raw-bytes">–</div>
+			<div class="row" style="margin-top:8px"><button type="button" id="raw-button">Refresh</button><span class="subtitle" id="raw-total"></span></div>
+			<h2 style="margin-top:16px">Feed test data to the decoders</h2>
+			<form id="inject-form" style="max-width:none">
+				<textarea name="hex" class="mono" placeholder="Hex bytes, for example 1b 1b 1b 1b 01 01 01 01 …"></textarea>
+				<div class="row"><button>Send</button><span class="message" id="inject-message"></span></div>
+			</form>
+			<h2 style="margin-top:16px">Device</h2>
+			<div class="row">
+				<button type="button" data-action="reboot">Restart</button>
+				<button type="button" data-action="bootloader">Restart into flashing mode</button>
+				<button type="button" class="danger" data-action="factory-reset">Erase all settings</button>
+				<span class="message" id="device-message"></span>
+			</div>
+		</details>
+	</section>
+</main>
+
+<script>
+"use strict";
+
+const api = "/api/v1/";
+const byId = (id) => document.getElementById(id);
+
+/* Create an element; text goes in as text, never as markup: names of
+ * networks and meters come from outside. */
+function element(tag, properties = {}, children = []) {
+	const node = document.createElement(tag);
+	for (const [name, value] of Object.entries(properties)) {
+		if (name === "text") {
+			node.textContent = value;
+		} else if (name === "class") {
+			node.className = value;
+		} else {
+			node.setAttribute(name, value);
+		}
+	}
+	node.append(...children);
+	return node;
+}
+
+async function request(path, options, attempt = 0) {
+	const response = await fetch(api + path, options);
+	/* The device handles one request per resource at a time and refuses a
+	 * second one that arrives meanwhile; that one is simply sent again. */
+	if ((response.status === 409 || response.status === 503) && attempt < 3) {
+		await new Promise((resolve) => setTimeout(resolve, 150 * (attempt + 1)));
+		return request(path, options, attempt + 1);
+	}
+	const body = await response.json().catch(() => ({}));
+	if (!response.ok) {
+		throw new Error(body.error || "The device answered with status " + response.status);
+	}
+	return body;
+}
+
+const post = (path, body) => request(path, {
+	method: "POST",
+	body: typeof body === "string" ? body : JSON.stringify(body || {}),
+});
+
+function showMessage(id, text, isError = false) {
+	const node = byId(id);
+	node.textContent = text;
+	node.classList.toggle("error", isError);
+}
+
+/* ---- formatting ---------------------------------------------------------- */
+
+const number = (value, digits) => value.toLocaleString(undefined, {
+	minimumFractionDigits: digits, maximumFractionDigits: digits,
+});
+
+/* Pick the magnitude that keeps the number short: 850 W, 12.4 kW. */
+function scaled(value, unit) {
+	const size = Math.abs(value);
+	if (unit === "Wh" || unit === "varh") {
+		return { text: number(value / 1000, size < 1e6 ? 2 : 1), unit: "k" + unit };
+	}
+	if ((unit === "W" || unit === "var" || unit === "VA") && size >= 10000) {
+		return { text: number(value / 1000, 2), unit: "k" + unit };
+	}
+	const digits = unit === "W" || unit === "var" || unit === "VA" || unit === "" ? 0 : unit === "A" ? 2 : 1;
+	return { text: number(value, Number.isInteger(value) ? 0 : digits), unit };
+}
+
+function duration(seconds) {
+	const days = Math.floor(seconds / 86400);
+	const hours = Math.floor(seconds % 86400 / 3600);
+	const minutes = Math.floor(seconds % 3600 / 60);
+	return days > 0 ? `${days} d ${hours} h` : hours > 0 ? `${hours} h ${minutes} min` : `${minutes} min`;
+}
+
+/* ---- status -------------------------------------------------------------- */
+
+const meterStates = {
+	locked: ["good", "✓", "Meter: reading"],
+	searching: ["warning", "…", "Meter: searching"],
+	probing: ["warning", "…", "Meter: requesting data"],
+	no_head: ["critical", "×", "Meter: read head offline"],
+};
+
+function pill(level, icon, label) {
+	return element("span", { class: "pill " + level }, [
+		element("span", { class: "icon", "aria-hidden": "true", text: icon }),
+		element("span", { text: label }),
+	]);
+}
+
+let latestStatus = null;
+
+function showStatus(status) {
+	latestStatus = status;
+
+	const { device, wifi, head, meter, mqtt } = status;
+	const pills = [
+		pill(...(meterStates[meter.state] || ["", "?", "Meter: " + meter.state])),
+		head.online ? pill("good", "✓", "Read head online") : pill("critical", "×", "Read head offline"),
+		wifi.station === "connected" ? pill("good", "✓", "Wi-Fi: " + wifi.ssid)
+			: wifi.station === "connecting" ? pill("warning", "…", "Wi-Fi: connecting to " + wifi.ssid)
+			: pill("warning", "!", "Wi-Fi: not set up"),
+	];
+	if (mqtt.enabled) {
+		pills.push(mqtt.connected ? pill("good", "✓", "MQTT connected") : pill("critical", "×", "MQTT disconnected"));
+	}
+	byId("pills").replaceChildren(...pills);
+
+	byId("device-line").textContent =
+		`Firmware ${device.firmware} · running for ${duration(device.uptime_s)}` +
+		(wifi.ip ? ` · ${wifi.ip}` : "");
+
+	const needsSetup = wifi.station === "unconfigured";
+	byId("setup-banner").hidden = !needsSetup;
+	document.querySelector("main").classList.toggle("setup", needsSetup);
+	if (needsSetup) {
+		byId("wifi-details").open = true;
+	}
+
+	const rows = [
+		["Device id", device.id],
+		["Last restart", device.last_restart],
+		["MAC address", wifi.mac],
+		["Wi-Fi signal", wifi.station === "connected" ? wifi.rssi + " dBm" : "–"],
+		["Setup access point", wifi.access_point ? `${wifi.ap_ssid} at ${wifi.ap_ip}` : "off"],
+		["Read head", head.online ? `firmware ${head.firmware}, running for ${duration(head.uptime_s)}` : "offline"],
+		["Optical settings", `${meter.ir_baud} baud ${meter.ir_format}` + (meter.active ? ", on request" : ", listening")],
+		["Detected protocol", meter.protocol],
+		["Telegrams decoded", meter.telegrams],
+		["Telegrams rejected", meter.decode_errors + (meter.last_decode_error ? ` (last: ${meter.last_decode_error})` : "")],
+		["Optical bytes received", head.ir_rx_bytes ?? "–"],
+		["Optical receive errors", head.online ? `${head.ir_rx_errors} line, ${head.ir_rx_dropped} dropped` : "–"],
+		["RS-485 frames", `${head.frames_ok} good, ${head.frame_errors} damaged, ${head.data_gaps} lost`],
+		["MQTT messages sent", mqtt.published],
+	];
+	showSignal(meter.signal);
+	byId("diagnostics-list").replaceChildren(...rows.flatMap(([name, value]) =>
+		[element("dt", { text: name }), element("dd", { text: String(value) })]));
+}
+
+/* ---- light signals for the meter's optical button --------------------------- */
+
+let signalWatched = false; /* a signal was started from this page */
+
+function showSignal(signal) {
+	if (!signalWatched || !signal) {
+		return;
+	}
+	if (signal.state === "running") {
+		showMessage("unlock-message", `Flashing… about ${Math.ceil(signal.remaining_ms / 1000)} s left.`);
+		return;
+	}
+	signalWatched = false;
+	if (signal.state === "done") {
+		showMessage("unlock-message", "Signal sent. Check the meter's display.");
+	} else if (signal.state === "failed") {
+		showMessage("unlock-message", "The read head stopped answering; the signal was abandoned.", true);
+	} else {
+		showMessage("unlock-message", "Stopped.");
+	}
+}
+
+async function startSignal(path, body) {
+	try {
+		await post(path, body);
+		signalWatched = true;
+		showMessage("unlock-message", "Flashing…");
+	} catch (error) {
+		showMessage("unlock-message", error.message, true);
+	}
+}
+
+byId("pin-form").addEventListener("submit", (event) => {
+	event.preventDefault();
+	const request = {};
+	for (const field of event.target.elements) {
+		if (field.name) {
+			request[field.name] = field.type === "number" ? Number(field.value) : field.value;
+		}
+	}
+	startSignal("meter/pin", request);
+});
+document.querySelectorAll("[data-flash]").forEach((button) => button.addEventListener("click", () =>
+	startSignal("meter/pulses", { count: 1, on_ms: Number(button.dataset.flash), off_ms: 400 })));
+byId("signal-stop").addEventListener("click", async () => {
+	try {
+		await post("meter/cancel");
+	} catch (error) {
+		showMessage("unlock-message", error.message, true);
+	}
+});
+
+/* ---- reading ------------------------------------------------------------- */
+
+const tileOrder = ["energy_import", "energy_export", "voltage_l1", "voltage_l2", "voltage_l3",
+	"current_l1", "current_l2", "current_l3", "power_l1", "power_l2", "power_l3", "frequency"];
+
+/* Whether a reading still describes "now" depends on its age, so the top of
+ * the page is redrawn every second and not only when a telegram arrives. */
+const freshness = { reading: null, receivedAt: 0, pollIntervalSeconds: 60 };
+
+function ageText(milliseconds) {
+	const seconds = Math.round(milliseconds / 1000);
+	return seconds < 90 ? `${seconds} s` : duration(seconds);
+}
+
+function showFreshness() {
+	const reading = freshness.reading;
+	if (!reading) {
+		return;
+	}
+
+	const age = Date.now() - freshness.receivedAt;
+	/* a meter that has to be asked answers once per poll interval; one that
+	 * sends by itself does so every few seconds */
+	const onRequest = latestStatus !== null && latestStatus.meter.active;
+	const limit = onRequest ? freshness.pollIntervalSeconds * 2000 + 30000 : 30000;
+	const stale = age > limit;
+	const power = stale || reading.power_w === undefined ? { text: "–", unit: "W" } : scaled(reading.power_w, "W");
+
+	document.querySelector("main").classList.toggle("stale", stale);
+	byId("power-value").textContent = power.text;
+	byId("power-unit").textContent = power.unit;
+	byId("reading-line").textContent = stale
+		? `No data from the meter for ${ageText(age)}. The values shown are the last ones received.`
+		: `Meter ${reading.meter_id || "unknown"} · ${reading.protocol}`;
+}
+setInterval(showFreshness, 1000);
+
+function showReading(reading) {
+	if (!reading.valid) {
+		return;
+	}
+
+	freshness.reading = reading;
+	freshness.receivedAt = Date.now() - reading.age_ms;
+	showFreshness();
+
+	const known = new Map(reading.values.filter((value) => value.key).map((value) => [value.key, value]));
+	const tiles = tileOrder.filter((key) => known.has(key)).map((key) => {
+		const value = known.get(key);
+		const shown = scaled(value.value, value.unit);
+		return element("div", { class: "tile" }, [
+			element("div", { class: "label", text: value.label }),
+			element("div", { class: "value" }, [
+				element("span", { text: shown.text }),
+				element("span", { class: "unit", text: shown.unit }),
+			]),
+		]);
+	});
+	byId("tiles").replaceChildren(...(tiles.length ? tiles
+		: [element("div", { class: "empty", text: "The telegram has no values this page knows by name; see the table below." })]));
+
+	byId("values-table").tBodies[0].replaceChildren(...reading.values.map((value) => element("tr", {}, [
+		element("td", { class: "mono", text: value.obis }),
+		element("td", { text: value.label || "" }),
+		element("td", { class: value.text === undefined ? "number" : "number mono", text: value.text ?? number(value.value, 3) }),
+		element("td", { text: value.unit || "" }),
+	])));
+}
+
+/* ---- power history chart --------------------------------------------------- */
+
+const svgNamespace = "http://www.w3.org/2000/svg";
+const chart = { points: [], intervalSeconds: 10, focusIndex: null, geometry: null };
+
+function svgElement(tag, attributes) {
+	const node = document.createElementNS(svgNamespace, tag);
+	for (const [name, value] of Object.entries(attributes)) {
+		node.setAttribute(name, value);
+	}
+	return node;
+}
+
+/* Round tick steps: 1, 2 or 5 times a power of ten. */
+function tickStep(range, count) {
+	const rough = range / count;
+	const magnitude = 10 ** Math.floor(Math.log10(rough));
+	const multiple = [1, 2, 5, 10].find((candidate) => candidate * magnitude >= rough);
+	return multiple * magnitude;
+}
+
+function drawChart() {
+	const svg = byId("chart-svg");
+	const values = chart.points.filter((point) => point !== null);
+	const hasData = values.length > 0;
+
+	/* an SVG element has no `hidden` property; the attribute is what counts */
+	svg.toggleAttribute("hidden", !hasData);
+	byId("chart-empty").hidden = hasData;
+	if (!hasData) {
+		return;
+	}
+
+	const width = svg.clientWidth || 600;
+	const height = 240;
+	const margin = { top: 12, right: 16, bottom: 24, left: 52 };
+	const plotWidth = width - margin.left - margin.right;
+	const plotHeight = height - margin.top - margin.bottom;
+
+	/* the axis always includes zero so that export (negative power) reads correctly */
+	let low = Math.min(0, ...values);
+	let high = Math.max(0, ...values);
+	if (high === low) {
+		high = low + 100;
+	}
+	const step = tickStep(high - low, 4);
+	low = Math.floor(low / step) * step;
+	high = Math.ceil(high / step) * step;
+
+	const slots = Math.max(chart.points.length - 1, 1);
+	const xOf = (index) => margin.left + plotWidth * index / slots;
+	const yOf = (value) => margin.top + plotHeight * (high - value) / (high - low);
+
+	svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+	svg.replaceChildren();
+
+	for (let tick = low; tick <= high + step / 2; tick += step) {
+		const y = yOf(tick);
+		svg.append(svgElement("line", {
+			x1: margin.left, x2: width - margin.right, y1: y, y2: y,
+			stroke: tick === 0 ? "var(--axis)" : "var(--grid)", "stroke-width": 1,
+		}));
+		const label = svgElement("text", { x: margin.left - 8, y: y + 4, "text-anchor": "end" });
+		label.textContent = number(tick, 0);
+		svg.append(label);
+	}
+
+	const minutesShown = chart.points.length * chart.intervalSeconds / 60;
+	const tickMinutes = minutesShown > 30 ? 15 : minutesShown > 10 ? 5 : 1;
+	for (let minutes = 0; minutes <= minutesShown; minutes += tickMinutes) {
+		const index = slots - minutes * 60 / chart.intervalSeconds;
+		if (index < 0) {
+			break;
+		}
+		const label = svgElement("text", { x: xOf(index), y: height - 6, "text-anchor": minutes === 0 ? "end" : "middle" });
+		label.textContent = minutes === 0 ? "now" : `−${minutes} min`;
+		svg.append(label);
+	}
+
+	/* one path per run of consecutive points; intervals without data stay empty */
+	let run = [];
+	const runs = [];
+	chart.points.forEach((point, index) => {
+		if (point === null) {
+			if (run.length) { runs.push(run); }
+			run = [];
+		} else {
+			run.push([xOf(index), yOf(point)]);
+		}
+	});
+	if (run.length) { runs.push(run); }
+
+	const baseline = yOf(0);
+	for (const points of runs) {
+		if (points.length === 1) {
+			/* a lone interval has no line to draw; mark it so it is not lost */
+			svg.append(svgElement("circle", { cx: points[0][0], cy: points[0][1], r: 2.5, fill: "var(--series)" }));
+			continue;
+		}
+		const line = points.map(([x, y], index) => `${index ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`).join("");
+		const first = points[0][0].toFixed(1);
+		const last = points[points.length - 1][0].toFixed(1);
+		svg.append(svgElement("path", {
+			d: `${line}L${last},${baseline}L${first},${baseline}Z`, fill: "var(--series)", opacity: 0.1,
+		}));
+		svg.append(svgElement("path", {
+			d: line, fill: "none", stroke: "var(--series)", "stroke-width": 2,
+			"stroke-linejoin": "round", "stroke-linecap": "round",
+		}));
+	}
+
+	chart.geometry = { xOf, yOf, margin, width, height, slots };
+	drawFocus();
+
+	byId("history-table").tBodies[0].replaceChildren(...chart.points.map((point, index) => element("tr", {}, [
+		element("td", { text: number((slots - index) * chart.intervalSeconds / 60, 1) }),
+		element("td", { class: "number", text: point === null ? "–" : number(point, 0) }),
+	])).reverse());
+}
+
+/* The crosshair: a hairline at the chosen time, a dot on the line, the value beside it. */
+function drawFocus() {
+	const svg = byId("chart-svg");
+	const tooltip = byId("chart-tooltip");
+
+	svg.querySelectorAll(".focus").forEach((node) => node.remove());
+	const point = chart.focusIndex === null ? null : chart.points[chart.focusIndex];
+	if (point === null || point === undefined || !chart.geometry) {
+		tooltip.hidden = true;
+		return;
+	}
+
+	const { xOf, yOf, margin, width, height, slots } = chart.geometry;
+	const x = xOf(chart.focusIndex);
+	const y = yOf(point);
+
+	svg.append(svgElement("line", {
+		class: "focus", x1: x, x2: x, y1: margin.top, y2: height - margin.bottom,
+		stroke: "var(--axis)", "stroke-width": 1,
+	}));
+	svg.append(svgElement("circle", {
+		class: "focus", cx: x, cy: y, r: 5, fill: "var(--series)", stroke: "var(--surface)", "stroke-width": 2,
+	}));
+
+	const secondsAgo = (slots - chart.focusIndex) * chart.intervalSeconds;
+	tooltip.querySelector("strong").textContent = number(point, 0) + " W";
+	tooltip.querySelector("span").textContent = secondsAgo === 0 ? "now"
+		: secondsAgo < 60 ? `${secondsAgo} s ago` : `${number(secondsAgo / 60, 1)} min ago`;
+	tooltip.hidden = false;
+
+	const scale = svg.clientWidth / width;
+	const left = x * scale + 12;
+	const flip = left + tooltip.offsetWidth > svg.clientWidth;
+	tooltip.style.left = (flip ? x * scale - 12 - tooltip.offsetWidth : left) + "px";
+	tooltip.style.top = Math.max(0, y * scale - tooltip.offsetHeight - 8) + "px";
+}
+
+/* Snap to the nearest interval that has a value. */
+function focusNear(index) {
+	let best = null;
+	chart.points.forEach((point, candidate) => {
+		if (point !== null && (best === null || Math.abs(candidate - index) < Math.abs(best - index))) {
+			best = candidate;
+		}
+	});
+	chart.focusIndex = best;
+	drawFocus();
+}
+
+byId("chart-svg").addEventListener("pointermove", (event) => {
+	if (!chart.geometry) {
+		return;
+	}
+	const svg = event.currentTarget;
+	const { margin, width, slots } = chart.geometry;
+	const x = (event.clientX - svg.getBoundingClientRect().left) * width / svg.clientWidth;
+	focusNear(Math.round((x - margin.left) / (width - margin.left - margin.right) * slots));
+});
+byId("chart-svg").addEventListener("pointerleave", () => { chart.focusIndex = null; drawFocus(); });
+byId("chart-svg").addEventListener("blur", () => { chart.focusIndex = null; drawFocus(); });
+byId("chart-svg").addEventListener("keydown", (event) => {
+	const direction = { ArrowLeft: -1, ArrowRight: 1 }[event.key];
+	if (!direction) {
+		return;
+	}
+	event.preventDefault();
+	let index = (chart.focusIndex ?? chart.points.length) + direction;
+	while (index >= 0 && index < chart.points.length && chart.points[index] === null) {
+		index += direction;
+	}
+	if (index >= 0 && index < chart.points.length) {
+		chart.focusIndex = index;
+		drawFocus();
+	}
+});
+window.addEventListener("resize", drawChart);
+
+async function loadHistory() {
+	try {
+		const history = await request("history");
+		chart.points = history.points;
+		chart.intervalSeconds = history.interval_s;
+		drawChart();
+	} catch (error) {
+		/* the next attempt follows on its own */
+	}
+}
+
+/* ---- live updates ---------------------------------------------------------- */
+
+let socket = null;
+let lastLiveMessage = 0;
+
+function connectSocket() {
+	socket = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`);
+	socket.onmessage = (event) => {
+		lastLiveMessage = Date.now();
+		const message = JSON.parse(event.data);
+		if (message.type === "status") {
+			showStatus(message.data);
+		} else if (message.type === "reading") {
+			showReading(message.data);
+		}
+	};
+	socket.onclose = () => setTimeout(connectSocket, 3000);
+}
+
+/* If the stream is quiet (old browser, proxy in between), ask instead. */
+async function pollIfQuiet() {
+	if (Date.now() - lastLiveMessage < 5000) {
+		return;
+	}
+	try {
+		showStatus(await request("status"));
+		showReading(await request("reading"));
+	} catch (error) {
+		byId("device-line").textContent = "The device does not answer. Retrying…";
+	}
+}
+
+/* ---- settings -------------------------------------------------------------- */
+
+async function loadConfig() {
+	const config = await request("config");
+	for (const form of [byId("meter-form"), byId("mqtt-form")]) {
+		for (const field of form.elements) {
+			if (!(field.name in config)) {
+				continue;
+			}
+			if (field.type === "checkbox") {
+				field.checked = config[field.name];
+			} else {
+				field.value = config[field.name];
+			}
+		}
+	}
+	byId("wifi-form").elements.ssid.value = config.wifi_ssid;
+	freshness.pollIntervalSeconds = config.poll_interval_s;
+	byId("mqtt-form").elements.mqtt_password.placeholder = config.mqtt_password_set ? "unchanged" : "none";
+}
+
+function saveSettings(formId, messageId) {
+	byId(formId).addEventListener("submit", async (event) => {
+		event.preventDefault();
+		const settings = {};
+		for (const field of event.target.elements) {
+			if (!field.name) {
+				continue;
+			}
+			if (field.type === "checkbox") {
+				settings[field.name] = field.checked;
+			} else if (field.type === "number" || field.name === "ir_baud") {
+				settings[field.name] = Number(field.value);
+			} else if (field.type !== "password" || field.value !== "") {
+				/* an empty password field means "keep the stored one" */
+				settings[field.name] = field.value;
+			}
+		}
+		try {
+			freshness.pollIntervalSeconds = (await post("config", settings)).poll_interval_s;
+			showMessage(messageId, "Saved.");
+		} catch (error) {
+			showMessage(messageId, error.message, true);
+		}
+	});
+}
+saveSettings("meter-form", "meter-message");
+saveSettings("mqtt-form", "mqtt-message");
+
+async function scanNetworks() {
+	const list = byId("networks");
+	try {
+		const scan = await request("wifi/scan");
+		list.replaceChildren(...scan.networks.map((network) => {
+			const button = element("button", { type: "button" }, [
+				element("span", { text: network.ssid + (network.secure ? "" : " (open)") }),
+				element("span", { class: "subtitle", text: network.rssi + " dBm" }),
+			]);
+			button.addEventListener("click", () => {
+				const form = byId("wifi-form");
+				form.elements.ssid.value = network.ssid;
+				form.elements.psk.focus();
+			});
+			return button;
+		}));
+		if (scan.scanning) {
+			showMessage("wifi-message", "Scanning…");
+			setTimeout(scanNetworks, 2500);
+		} else {
+			showMessage("wifi-message", scan.networks.length ? "" : "No networks found.");
+		}
+	} catch (error) {
+		showMessage("wifi-message", error.message, true);
+	}
+}
+byId("scan-button").addEventListener("click", scanNetworks);
+byId("wifi-details").addEventListener("toggle", (event) => {
+	if (event.target.open) {
+		scanNetworks();
+	}
+});
+
+byId("wifi-form").addEventListener("submit", async (event) => {
+	event.preventDefault();
+	const form = event.target.elements;
+	try {
+		await post("wifi", { ssid: form.ssid.value, psk: form.psk.value });
+		form.psk.value = "";
+		showMessage("wifi-message", "Saved. Connecting…");
+		waitForNetwork(form.ssid.value);
+	} catch (error) {
+		showMessage("wifi-message", error.message, true);
+	}
+});
+
+/* After new credentials: report the address the device got, or that it did not get one. */
+function waitForNetwork(ssid) {
+	const deadline = Date.now() + 45000;
+	const timer = setInterval(() => {
+		const wifi = latestStatus && latestStatus.wifi;
+		if (wifi && wifi.station === "connected" && wifi.ssid === ssid) {
+			clearInterval(timer);
+			showMessage("wifi-message",
+				`Connected. Switch back to your own Wi-Fi and open http://${wifi.ip}/ or ` +
+				"http://s0-master.local/ there. This access point closes in half a minute.");
+		} else if (Date.now() > deadline) {
+			clearInterval(timer);
+			showMessage("wifi-message", "No connection yet. Check the name and password; the device keeps trying.", true);
+		}
+	}, 1000);
+}
+
+/* ---- diagnostics ----------------------------------------------------------- */
+
+async function loadRaw() {
+	try {
+		const raw = await request("raw");
+		byId("raw-bytes").textContent = raw.hex.replace(/(..)/g, "$1 ").trim() || "–";
+		byId("raw-total").textContent = `${raw.total} bytes received since start`;
+	} catch (error) {
+		byId("raw-total").textContent = error.message;
+	}
+}
+byId("raw-button").addEventListener("click", loadRaw);
+byId("diagnostics").addEventListener("toggle", (event) => {
+	if (event.target.open) {
+		loadRaw();
+	}
+});
+
+byId("inject-form").addEventListener("submit", async (event) => {
+	event.preventDefault();
+	try {
+		const result = await post("inject", event.target.elements.hex.value);
+		showMessage("inject-message", `${result.accepted} bytes passed to the decoders.`);
+	} catch (error) {
+		showMessage("inject-message", error.message, true);
+	}
+});
+
+const deviceActions = {
+	"reboot": ["Restart the device?", "Restarting…"],
+	"bootloader": ["Restart into flashing mode? The device stays there until new firmware is written or it is reset.", "Waiting in flashing mode."],
+	"factory-reset": ["Erase all settings, including Wi-Fi and MQTT?", "Settings erased. Restarting…"],
+};
+document.querySelectorAll("[data-action]").forEach((button) => button.addEventListener("click", async () => {
+	const [question, answer] = deviceActions[button.dataset.action];
+	if (!confirm(question)) {
+		return;
+	}
+	try {
+		await post(button.dataset.action);
+		showMessage("device-message", answer);
+	} catch (error) {
+		showMessage("device-message", error.message, true);
+	}
+}));
+
+/* ---- start ----------------------------------------------------------------- */
+
+connectSocket();
+pollIfQuiet();
+setInterval(pollIfQuiet, 2000);
+loadHistory();
+setInterval(loadHistory, 10000);
+loadConfig().catch(() => {});
+</script>
+</body>
+</html>
